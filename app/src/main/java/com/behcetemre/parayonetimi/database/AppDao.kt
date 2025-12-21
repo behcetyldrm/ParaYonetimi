@@ -17,26 +17,27 @@ interface AppDao {
     fun getAllCategory() : Flow<List<CategoryModel>>
 
     //belirtilen aralıkta ki harcamaları getir
-    @Query("SELECT amount FROM spending_model WHERE createdDate BETWEEN :startDate AND :endDate")
-    fun getAmountByDate(startDate: Long, endDate: Long) : Flow<List<Int>>
+    @Query("SELECT SUM(amount) FROM spending_model WHERE createdDate BETWEEN :startDate AND :endDate")
+    fun getAmountByDate(startDate: Long, endDate: Long) : Flow<Int?>
 
-    /*Değişecek categoryId kaldır*/
-    @Query("SELECT amount FROM spending_model WHERE category = :categoryId AND createdDate BETWEEN :startDate AND :endDate")
-    fun getAmountByCategory(categoryId: Int, startDate: Long, endDate: Long) : Flow<List<Int>>
+    @Query("SELECT * FROM spending_model WHERE createdDate BETWEEN :startDate AND :endDate")
+    fun getAmountByCategory(startDate: Long, endDate: Long) : Flow<List<SpendingModel>>
+    /*@Query("SELECT SUM(amount) FROM spending_model WHERE category = :categoryId AND createdDate BETWEEN :startDate AND :endDate")
+    fun getAmountByCategory(categoryId: Int, startDate: Long, endDate: Long) : Flow<Int?>*/
 
     //Category
     @Insert
-    fun insertCategory(category: CategoryModel)
+    suspend fun insertCategory(category: CategoryModel)
     @Update
-    fun updateCategory(category: CategoryModel)
+    suspend fun updateCategory(category: CategoryModel)
     @Delete
-    fun deleteCategory(category: CategoryModel)
+    suspend fun deleteCategory(category: CategoryModel)
 
     //Spending
     @Insert
-    fun insertSpending(spending: SpendingModel)
+    suspend fun insertSpending(spending: SpendingModel)
     @Update
-    fun updateSpending(spending: SpendingModel)
+    suspend fun updateSpending(spending: SpendingModel)
     @Delete
-    fun deleteSpending(spending: SpendingModel)
+    suspend fun deleteSpending(spending: SpendingModel)
 }

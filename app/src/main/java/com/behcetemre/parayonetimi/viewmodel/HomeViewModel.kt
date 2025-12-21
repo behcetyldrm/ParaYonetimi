@@ -19,6 +19,10 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class CategoryWithSpend(
+    val category: CategoryModel,
+    val totalAmount: Int
+)
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
@@ -51,6 +55,24 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
         startDay.timeInMillis to endDay.timeInMillis //iki tarih aralığını paket yapar (pair)
     }
 
+    private val categorySpendings= selectedDate.flatMapLatest { (startDate, endDate) ->
+        dao.getAmountByCategory(startDate, endDate)
+    }
+
+    val categoryUiList : StateFlow<List<CategoryWithSpend>> = combine(
+        dao.getAllCategory(),
+        categorySpendings
+    ){ categories, spendings ->
+        categories.map { category ->
+            val totalAmount = spendings.filter { it.category == category.categoryId }.sumOf { it.amount }
+            CategoryWithSpend(category, totalAmount)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     val categoryList : StateFlow<List<CategoryModel>> = dao.getAllCategory()
         .stateIn(
             scope = viewModelScope,
@@ -60,23 +82,25 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
 
 
     //flatMapLatest -> sadece seçili işlemi yapar diğer işlemleri durdurur
-    val spendings : StateFlow<List<Int>> = selectedDate.flatMapLatest { (startDate, endDate) ->
+    val spendings : StateFlow<Int?> = selectedDate.flatMapLatest { (startDate, endDate) ->
         dao.getAmountByDate(startDate = startDate, endDate = endDate)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = 0
     )
-    fun getCategoryId(id: Int) : StateFlow<List<Int>>{
-        val categorySpendings : StateFlow<List<Int>> = selectedDate.flatMapLatest { (startDate, endDate) ->
+    /*fun getCategoryId(id: Int) : StateFlow<Int?>{
+        val categorySpendings : StateFlow<Int?> = selectedDate.flatMapLatest { (startDate, endDate) ->
             dao.getAmountByCategory(categoryId = id, startDate = startDate, endDate = endDate)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
+            initialValue = 0
         )
         return categorySpendings
-    }
+    }*/
+
+
 
 
     fun addCategory(categoryModel: CategoryModel) {

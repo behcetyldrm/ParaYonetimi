@@ -99,6 +99,7 @@ import com.behcetemre.parayonetimi.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 
 data class CategoryColor(
     val bgColor1: Color,
@@ -112,7 +113,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val year = viewModel.selectedYear.collectAsState()
     val month = viewModel.selectedMonth.collectAsState()
     val categoryList = viewModel.categoryList.collectAsState()
-    val spendings = viewModel.spendings.collectAsState().value.sumOf { it }
+    val categoryUiList = viewModel.categoryUiList.collectAsState()
+    val spendings = viewModel.spendings.collectAsState().value ?: 0
     val limit = categoryList.value.sumOf { it.limit }
 
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -161,19 +163,16 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                items(categoryList.value){ category ->
-                    val index = categoryList.value.indexOf(category) % colorList.size
+                items(categoryUiList.value){ item ->
+                    val index = categoryList.value.indexOf(item.category) % colorList.size
                     val color = colorList[index]
 
-                    val categorySpend = remember(category.categoryId) {
-                        viewModel.getCategoryId(id = category.categoryId)
-                    }.collectAsState().value
                     ShowCategoryCard(
-                        categoryModel = category,
+                        categoryModel = item.category,
                         bgColor1 = color.bgColor1,
                         bgColor2 = color.bgColor2,
                         iconColor = color.iconColor,
-                        spends = categorySpend,
+                        spends = item.totalAmount,
                         navController = navController
                     )
                 }
@@ -572,8 +571,9 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     color = Color(0xffE1E2EC),
                     shape = RoundedCornerShape(12.dp)
                 ) {
+                    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
                     Text(
-                        text = SimpleDateFormat("dd/MM/yyyy").format(date),
+                        text = dateFormatter.format(date),
                         modifier = Modifier.padding(12.dp),
                         color = Color.Black
                     )
@@ -705,16 +705,15 @@ fun DatePickerSheet(
 @Composable
 fun ShowCategoryCard(
     categoryModel: CategoryModel,
-    spends: List<Int>,
+    spends: Int,
     bgColor1: Color,
     bgColor2: Color,
     iconColor: Color,
     navController: NavController
 ) {
 
-    val totalSpend = spends.sumOf { it }
     val percent = if (categoryModel.limit > 0){
-        ((totalSpend.toFloat() * 100) / categoryModel.limit.toFloat()).toInt()
+        ((spends.toFloat() * 100) / categoryModel.limit.toFloat()).toInt()
     } else {
         0
     }
@@ -786,7 +785,7 @@ fun ShowCategoryCard(
                                 color = Color.Black.copy(0.7f)
                             )
                             Spacer(Modifier.width(2.dp))
-                            Text(text = "$totalSpend ₺", fontWeight = FontWeight.SemiBold, color = bgColor2)
+                            Text(text = "$spends ₺", fontWeight = FontWeight.SemiBold, color = bgColor2)
                         }
                     }
                 }

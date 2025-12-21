@@ -16,11 +16,13 @@ interface AppDao {
     @Query("SELECT * FROM category_model")
     fun getAllCategory() : Flow<List<CategoryModel>>
 
-    @Query("SELECT amount FROM spending_model WHERE createdDate = :selectedDate")
-    fun getAmountByDate(selectedDate: Long) : Flow<List<Int>>
+    //belirtilen aralıkta ki harcamaları getir
+    @Query("SELECT amount FROM spending_model WHERE createdDate BETWEEN :startDate AND :endDate")
+    fun getAmountByDate(startDate: Long, endDate: Long) : Flow<List<Int>>
 
-    @Query("SELECT amount FROM spending_model WHERE category = :categoryId")
-    fun getAmountByCategory(categoryId: Int) : Flow<List<Int>>
+    /*Değişecek categoryId kaldır*/
+    @Query("SELECT amount FROM spending_model WHERE category = :categoryId AND createdDate BETWEEN :startDate AND :endDate")
+    fun getAmountByCategory(categoryId: Int, startDate: Long, endDate: Long) : Flow<List<Int>>
 
     //Category
     @Insert
@@ -31,4 +33,10 @@ interface AppDao {
     fun deleteCategory(category: CategoryModel)
 
     //Spending
+    @Insert
+    fun insertSpending(spending: SpendingModel)
+    @Update
+    fun updateSpending(spending: SpendingModel)
+    @Delete
+    fun deleteSpending(spending: SpendingModel)
 }

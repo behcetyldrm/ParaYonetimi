@@ -29,5 +29,6 @@ data class SpendingModel(
     val spendingId: Int = 0,
     val amount: Int,
     val createdDate: Long,
-    val category: Int
+    val category: Int,
+    val note: String
 )

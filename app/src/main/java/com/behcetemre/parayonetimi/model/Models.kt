@@ -14,12 +14,37 @@ data class CategoryModel(
 )
 
 @Entity(
+    tableName = "sub_category_model",
+    foreignKeys = [
+        ForeignKey(
+            entity = CategoryModel::class,
+            parentColumns = ["categoryId"],
+            childColumns = ["category"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class SubCategoryModel(
+    @PrimaryKey(autoGenerate = true)
+    val subCategoryId: Int = 0,
+    val subCategoryName: String,
+    val category: Int,
+    val limit: Int
+)
+
+@Entity(
     tableName = "spending_model",
     foreignKeys = [
         ForeignKey(
             entity = CategoryModel::class,
             parentColumns = ["categoryId"],
             childColumns = ["category"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = SubCategoryModel::class,
+            parentColumns = ["subCategoryId"],
+            childColumns = ["subCategory"],
             onDelete = ForeignKey.CASCADE
         )
     ]
@@ -30,5 +55,6 @@ data class SpendingModel(
     val amount: Int,
     val createdDate: Long,
     val category: Int,
+    val subCategory: Int? = null,
     val note: String
 )

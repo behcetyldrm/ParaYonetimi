@@ -3,6 +3,7 @@
 package com.behcetemre.parayonetimi.view
 
 import android.annotation.SuppressLint
+import android.widget.Space
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -42,6 +44,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -95,7 +98,9 @@ import androidx.navigation.NavController
 import com.behcetemre.parayonetimi.R
 import com.behcetemre.parayonetimi.model.CategoryModel
 import com.behcetemre.parayonetimi.model.SpendingModel
+import com.behcetemre.parayonetimi.model.SubCategoryModel
 import com.behcetemre.parayonetimi.viewmodel.HomeViewModel
+import com.behcetemre.parayonetimi.viewmodel.SubCategoryWithSpend
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -166,6 +171,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 items(categoryUiList.value){ item ->
                     val index = categoryList.value.indexOf(item.category) % colorList.size
                     val color = colorList[index]
+                    val subCategories = item.subCategory
 
                     ShowCategoryCard(
                         categoryModel = item.category,
@@ -173,6 +179,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                         bgColor2 = color.bgColor2,
                         iconColor = color.iconColor,
                         spends = item.totalAmount,
+                        subCategoryList = subCategories,
                         navController = navController
                     )
                 }
@@ -316,11 +323,19 @@ fun AddCategoryCard(
                                         limit = categoryLimit.toInt(),
                                         icon = icon
                                     )
-                                    viewModel.addCategory(category)
+                                    viewModel.addCategory(category) { id ->
+                                        val subCategory = SubCategoryModel(
+                                            subCategoryName = "Diğer",
+                                            category = id,
+                                            limit = categoryLimit.toInt()
+                                        )
+                                        viewModel.addSubCategory(subCategory)
+                                        onDissmiss()
+                                    }
+
                                 } else {
                                     Toast.makeText(context, "Lütfen boş alanları doldurunuz", Toast.LENGTH_SHORT).show()
                                 }
-                                onDissmiss()
                             },
                             shape = CircleShape,
                             colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
@@ -705,6 +720,7 @@ fun DatePickerSheet(
 @Composable
 fun ShowCategoryCard(
     categoryModel: CategoryModel,
+    subCategoryList: List<SubCategoryWithSpend>,
     spends: Int,
     bgColor1: Color,
     bgColor2: Color,
@@ -712,12 +728,15 @@ fun ShowCategoryCard(
     navController: NavController
 ) {
 
+    var expanded by remember { mutableStateOf(false) }
+    val rotation = animateFloatAsState(targetValue = if (expanded) 180f else 0f)
+
     val percent = if (categoryModel.limit > 0){
         ((spends.toFloat() * 100) / categoryModel.limit.toFloat()).toInt()
     } else {
         0
     }
-
+    val subCategoryCount = subCategoryList.size
     val iconRes = when(categoryModel.icon){
         "shop_icon" -> R.drawable.shop_icon
         "money_icon" -> R.drawable.money_icon
@@ -733,6 +752,7 @@ fun ShowCategoryCard(
         "tech_icon" -> R.drawable.tech_icon
         else -> R.drawable.shop_icon
     }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -765,15 +785,69 @@ fun ShowCategoryCard(
                     }
                     Spacer(Modifier.width(10.dp))
 
-                    Column {
-                        Text(
-                            text = categoryModel.categoryName,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.Black
-                        )
+                    Column{
+                        Row (
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ){
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = categoryModel.categoryName,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Black
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .background(color = Color(0xffE1E2EC), shape = CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = subCategoryCount.toString(),
+                                        fontSize = 12.sp,
+                                        color = Color.Black,
+                                        modifier = Modifier.fillMaxSize(),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier.background(
+                                        color = iconColor,
+                                        shape = RoundedCornerShape(16.dp)
+                                    ),
+                                ) {
+                                    Text(
+                                        text = "%${percent}",
+                                        color = bgColor1,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                IconButton(
+                                    onClick = { expanded = !expanded },
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xffE1E2EC)),
+                                    modifier = Modifier.size(26.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.graphicsLayer { rotationZ = rotation.value }
+                                    )
+                                }
+                            }
+                        }
 
                         Row {
-                            Text(text = "Limit:", fontSize = 14.sp, color = Color.Black.copy(0.7f))
+                            Text(text = "Limit:", fontSize = 12.sp, color = Color.Black.copy(0.7f))
                             Spacer(Modifier.width(2.dp))
                             Text(text = "${categoryModel.limit} ₺")
 
@@ -781,7 +855,6 @@ fun ShowCategoryCard(
 
                             Text(
                                 text = "Harcanan:",
-                                fontSize = 14.sp,
                                 color = Color.Black.copy(0.7f)
                             )
                             Spacer(Modifier.width(2.dp))
@@ -789,27 +862,70 @@ fun ShowCategoryCard(
                         }
                     }
                 }
-
-                Row(
-                    modifier = Modifier.background(
-                        color = iconColor,
-                        shape = RoundedCornerShape(16.dp)
-                    ),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Text(
-                        text = "%${percent}",
-                        color = bgColor1,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
             }
-
-
             Spacer(Modifier.height(16.dp))
             MoneyProgressBar(percent = percent, color1 = bgColor1, color2 = bgColor2)
+
+            AnimatedVisibility(visible = expanded) {
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    subCategoryList.forEach { subCategoryWithAmount ->
+                        val subCategory = subCategoryWithAmount.subCategory
+                        val amount = subCategoryWithAmount.totalAmount
+
+                        val subPercent = if (categoryModel.limit > 0){
+                            ((amount.toFloat() * 100) / subCategory.limit.toFloat()).toInt()
+                        } else {
+                            0
+                        }
+
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = subCategory.subCategoryName,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Black
+                                )
+
+                                Box(
+                                    modifier = Modifier.background(
+                                        color = iconColor,
+                                        shape = RoundedCornerShape(16.dp)
+                                    ),
+                                ) {
+                                    Text(
+                                        text = "%${subPercent}",
+                                        color = bgColor1,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+
+                            Row {
+                                Text(text = "Limit:", fontSize = 12.sp, color = Color.Black.copy(0.7f))
+                                Spacer(Modifier.width(2.dp))
+                                Text(text = "${subCategory.limit} ₺")
+
+                                Spacer(Modifier.width(8.dp))
+
+                                Text(
+                                    text = "Harcanan:",
+                                    color = Color.Black.copy(0.7f)
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Text(text = "$amount ₺", fontWeight = FontWeight.SemiBold, color = bgColor2)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            MoneyProgressBar(percent = subPercent, color1 = bgColor1, color2 = bgColor2)
+                        }
+                    }
+                }
+            }
         }
     }
 }

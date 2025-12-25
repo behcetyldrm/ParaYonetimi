@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.behcetemre.parayonetimi.database.AppDao
 import com.behcetemre.parayonetimi.model.CategoryModel
 import com.behcetemre.parayonetimi.model.SpendingModel
+import com.behcetemre.parayonetimi.model.SubCategoryModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,10 +18,16 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+data class SubCategoryWithSpend(
+    val subCategory: SubCategoryModel,
+    val totalAmount: Int
+)
 data class CategoryWithSpend(
     val category: CategoryModel,
+    val subCategory: List<SubCategoryWithSpend>,
     val totalAmount: Int
 )
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -61,11 +68,18 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
 
     val categoryUiList : StateFlow<List<CategoryWithSpend>> = combine(
         dao.getAllCategory(),
+        dao.getAllSubCategory(),
         categorySpendings
-    ){ categories, spendings ->
+    ){ categories, subCategories, spendings ->
         categories.map { category ->
             val totalAmount = spendings.filter { it.category == category.categoryId }.sumOf { it.amount }
-            CategoryWithSpend(category, totalAmount)
+            val subCategory = subCategories.filter { it.category == category.categoryId }
+            val subCategoryWithAmount = subCategory.map { subCategory ->
+                val spending = spendings.filter { it.subCategory == subCategory.subCategoryId }.sumOf { it.amount }
+                SubCategoryWithSpend(subCategory, spending)
+            }
+
+            CategoryWithSpend(category, subCategoryWithAmount, totalAmount)
         }
     }.stateIn(
         scope = viewModelScope,
@@ -89,23 +103,19 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = 0
     )
-    /*fun getCategoryId(id: Int) : StateFlow<Int?>{
-        val categorySpendings : StateFlow<Int?> = selectedDate.flatMapLatest { (startDate, endDate) ->
-            dao.getAmountByCategory(categoryId = id, startDate = startDate, endDate = endDate)
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
-        return categorySpendings
-    }*/
 
-
-
-
-    fun addCategory(categoryModel: CategoryModel) {
+    fun addCategory(categoryModel: CategoryModel, getCategoryId: (Int) -> Unit) {
         viewModelScope.launch (Dispatchers.IO){
-            dao.insertCategory(categoryModel)
+            val categoryId = dao.insertCategory(categoryModel)
+            withContext(Dispatchers.Main){
+                getCategoryId(categoryId.toInt())
+            }
+        }
+    }
+
+    fun addSubCategory(subCategoryModel: SubCategoryModel) {
+        viewModelScope.launch (Dispatchers.IO){
+            dao.insertSubCategory(subCategoryModel)
         }
     }
 

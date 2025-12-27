@@ -3,7 +3,6 @@
 package com.behcetemre.parayonetimi.view
 
 import android.annotation.SuppressLint
-import android.widget.Space
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -38,11 +36,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.ButtonDefaults
@@ -63,8 +63,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SplitButtonDefaults
-import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -75,6 +73,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,6 +122,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val limit = categoryList.value.sumOf { it.limit }
 
     var categoryExpanded by remember { mutableStateOf(false) }
+    var subCategoryExpanded by remember { mutableStateOf(false) }
     var spendingExpanded by remember { mutableStateOf(false) }
     var datePickerExpanded by remember { mutableStateOf(false) }
 
@@ -139,7 +139,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         modifier = Modifier.fillMaxSize(),
         floatingActionButton = { FloatingButton(
             onAddCategoryClick = { categoryExpanded = true },
-            onAddSpendingClick = { spendingExpanded = true }
+            onAddSpendingClick = { spendingExpanded = true },
+            onAddSubCategoryClick = { subCategoryExpanded = true }
         ) }
     ) { innerPadding ->
         Column(
@@ -152,18 +153,16 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 datePickerExpanded = true
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = "Kategoriler",
                 fontSize = 14.sp,
                 color = Color.Black.copy(0.7f),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 16.dp),
                 textAlign = TextAlign.Start
             )
-            Spacer(Modifier.height(4.dp))
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -204,6 +203,14 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     }
 
     AnimatedVisibility(
+        visible = subCategoryExpanded,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        AddSubCategory(viewModel = viewModel) { subCategoryExpanded = false }
+    }
+
+    AnimatedVisibility(
         visible = datePickerExpanded,
         enter = fadeIn(),
         exit = fadeOut()
@@ -219,7 +226,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
 @Composable
 fun FloatingButton(
     onAddCategoryClick: () -> Unit,
-    onAddSpendingClick: () -> Unit
+    onAddSpendingClick: () -> Unit,
+    onAddSubCategoryClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -252,12 +260,23 @@ fun FloatingButton(
         FloatingActionButtonMenuItem(
             onClick = {
                 expanded = false
+                onAddSubCategoryClick()
+            },
+            text = { Text("Alt Kategori Ekle", color = Color.White) },
+            containerColor = Color(0xff101828),
+            icon = { Icon(imageVector = Icons.Default.AccountTree, contentDescription = null, tint = Color.White) }
+        )
+
+        FloatingActionButtonMenuItem(
+            onClick = {
+                expanded = false
                 onAddSpendingClick()
             },
             text = { Text("Harcama Ekle", color = Color.White) },
             containerColor = Color(0xff101828),
             icon = { Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = Color.White) }
         )
+
     }
 }
 
@@ -426,6 +445,213 @@ fun AddCategoryCard(
     }
 }
 
+@Composable
+fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
+
+    val categoryList = viewModel.categoryList.collectAsState().value
+    val subCategoryList = viewModel.subCategoryList.collectAsState().value
+
+    var categoryPicker by remember { mutableStateOf(false) }
+    var subCategoryName by remember { mutableStateOf("") }
+    var subCategoryLimit by remember { mutableStateOf("") }
+    var selectedCategoryId by remember { mutableStateOf<Int?>(null) }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.5f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ){
+                    IconButton(
+                        onClick = {
+                            /*Sub category Save*/
+                            if (selectedCategoryId != null && subCategoryName.isNotBlank() && subCategoryLimit.isNotBlank()){
+                                val subCategory = SubCategoryModel(
+                                    subCategoryName = subCategoryName,
+                                    category = selectedCategoryId!!,
+                                    limit = subCategoryLimit.toInt()
+                                )
+                                viewModel.addSubCategory(subCategory)
+                                onDissmiss()
+                            }
+                        },
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
+                        modifier = Modifier.size(25.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            tint = Color.White,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = { onDissmiss() },
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
+                        modifier = Modifier.size(25.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            tint = Color.White,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                /*Category picker*/
+                val selectedCategory = categoryList.find { it.categoryId == selectedCategoryId }
+                val rotation by animateFloatAsState(targetValue = if (categoryPicker) 180f else 0f)
+                Text(
+                    text = "Kategori Seçin*",
+                    fontSize = 14.sp,
+                    color = Color.Black.copy(0.7f),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+                Spacer(Modifier.height(4.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth().clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { categoryPicker = true },
+                    color = Color(0xffE1E2EC),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = selectedCategory?.categoryName ?: "Seçiniz",
+                            color = Color.Black
+                        )
+
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            modifier = Modifier.graphicsLayer { rotationZ = rotation },
+                            tint = Color.Black
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = categoryPicker,
+                        onDismissRequest = { categoryPicker = false },
+                        shape = RoundedCornerShape(12.dp),
+                        containerColor = Color.White,
+                        modifier = Modifier.heightIn(max = 160.dp)
+                    ) {
+                        categoryList.forEach { category ->
+                            val iconRes = when(category.icon){
+                                "shop_icon" -> R.drawable.shop_icon
+                                "money_icon" -> R.drawable.money_icon
+                                "home_icon" -> R.drawable.home_icon
+                                "food_icon" -> R.drawable.food_icon
+                                "belge_icon" -> R.drawable.belge_icon
+                                "book_icon" -> R.drawable.book_icon
+                                "coffee_icon" -> R.drawable.coffee_icon
+                                "car_icon" -> R.drawable.car_icon
+                                "exercise_icon" -> R.drawable.exercise_icon
+                                "game_icon" -> R.drawable.game_icon
+                                "pet_icon" -> R.drawable.pet_icon
+                                "tech_icon" -> R.drawable.tech_icon
+                                else -> R.drawable.shop_icon
+                            }
+                            DropdownMenuItem(
+                                text = { Text(category.categoryName) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(iconRes),
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    selectedCategoryId = category.categoryId
+                                    categoryPicker = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+
+                /*Sub Category Name*/
+                Text(
+                    text = "Alt Kategori Adı*",
+                    fontSize = 14.sp,
+                    color = Color.Black.copy(0.7f),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+                Spacer(Modifier.height(4.dp))
+                SpecialTextField(
+                    value = subCategoryName,
+                    placeHolder = "Örn: Mutfak, Fatura"
+                ) {
+                    if (subCategoryName.length <= 20) subCategoryName = it
+                }
+                Spacer(Modifier.height(16.dp))
+
+                /*Limit*/
+                val subCategories = subCategoryList.filter {
+                    it.category == selectedCategoryId && it.subCategoryName != "Diğer"
+                }
+                val totalSubCategoryLimit = subCategories.sumOf { it.limit }
+                val remainingLimit = if (selectedCategory != null) {
+                    selectedCategory.limit - totalSubCategoryLimit
+                } else {
+                    null
+                }
+
+                Row (modifier = Modifier.fillMaxWidth()){
+                    Text(
+                        text = "Limit*",
+                        fontSize = 14.sp,
+                        color = Color.Black.copy(0.7f),
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = "Toplam: ${selectedCategory?.limit ?: 0}₺",
+                        fontSize = 14.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text(
+                        text = "Kalan: ${remainingLimit ?:"-"}₺",
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                SpecialTextField(
+                    value = subCategoryLimit,
+                    placeHolder = "1000",
+                    keyboardType = KeyboardType.Number
+                ) {
+                    if (subCategoryLimit.length <= 8) subCategoryLimit = it
+                }
+            }
+        }
+    }
+}
+
 @SuppressLint("SimpleDateFormat")
 @Composable
 fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
@@ -433,13 +659,18 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
     val calendar = Calendar.getInstance().timeInMillis
 
     val categoryList = viewModel.categoryList.collectAsState().value
+    val subCategoryList = viewModel.subCategoryList.collectAsState().value
 
-    var categoryName by remember { mutableStateOf("Seçiniz") }
+    var selectedCategory by remember { mutableStateOf<Int?>(null) }
+    var selectedSubCategory by remember { mutableStateOf<Int?>(null) }
     var amount by remember { mutableStateOf("") }
     var date by remember { mutableLongStateOf(calendar) }
     var note by remember { mutableStateOf("") }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
+    var showSubCategoryPicker by remember { mutableStateOf(false) }
+    var visibleSub by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -464,16 +695,17 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                 ){
                     IconButton(
                         onClick = {
-                            if (categoryName != "Seçiniz" && amount.isNotBlank()){
+                            if (selectedCategory != null && amount.isNotBlank() && amount.toInt() > 0 && selectedSubCategory != null){
                                 val spending = SpendingModel(
                                     amount = amount.toInt(),
                                     createdDate = date,
-                                    category = categoryList.find { it.categoryName == categoryName }!!.categoryId,
-                                    note = note
+                                    category = categoryList.find { it.categoryId == selectedCategory }!!.categoryId,
+                                    note = note,
+                                    subCategory = selectedSubCategory
                                 )
                                 viewModel.addSpending(spending)
+                                onDissmiss()
                             }
-                            onDissmiss()
                         },
                         shape = CircleShape,
                         colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
@@ -504,55 +736,136 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     }
                 }
                 /*Category Picker*/
-                SplitButtonLayout(
-                    leadingButton = {
-                        SplitButtonDefaults.LeadingButton(
-                            onClick = {},
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xff0d9488))
-                        ) {
-                            Text(categoryName, color = Color.White)
-                        }
-                    },
-                    trailingButton = {
-                        var checked by remember { mutableStateOf(false) }
-                        val rotation by animateFloatAsState(targetValue = if (checked) 180f else 0f)
+                Text(
+                    text = "Kategori Seçin*",
+                    fontSize = 14.sp,
+                    color = Color.Black.copy(0.7f),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+                Spacer(Modifier.height(4.dp))
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { showCategoryPicker = true },
+                    color = Color(0xffE1E2EC),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    val selectedCategoryName = categoryList.find { it.categoryId == selectedCategory }
+                    val rotation1 by animateFloatAsState(targetValue = if (showCategoryPicker) 180f else 0f)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = selectedCategoryName?.categoryName ?: "Seçiniz",
+                            color = Color.Black
+                        )
 
-                        SplitButtonDefaults.TrailingButton(
-                            checked = checked,
-                            onCheckedChange = { checked = it },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xff0d9488))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.ArrowDropDown,
-                                contentDescription = null,
-                                modifier = Modifier.graphicsLayer { rotationZ = rotation },
-                                tint = Color.White
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            modifier = Modifier.graphicsLayer { rotationZ = rotation1 },
+                            tint = Color.Black
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showCategoryPicker,
+                        onDismissRequest = { showCategoryPicker = false },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.heightIn(max = 160.dp),
+                        containerColor = Color.White
+                    ) {
+                        categoryList.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.categoryName) },
+                                onClick = {
+                                    selectedCategory = category.categoryId
+                                    showCategoryPicker = false
+                                    visibleSub = true
+                                }
                             )
                         }
-                        Spacer(Modifier.height(2.dp))
-                        DropdownMenu(
-                            expanded = checked,
-                            onDismissRequest = { checked = false }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                /*Sub Category Picker*/
+                val subCategories = subCategoryList.filter { it.category == selectedCategory }
+                val selectedSubCategoryName = subCategories.find { it.subCategoryId == selectedSubCategory }
+                val rotation2 by animateFloatAsState(targetValue = if (showSubCategoryPicker) 180f else 0f)
+                AnimatedVisibility(visible = visibleSub) {
+                    Column {
+                        Text(
+                            text = "Alt Kategori Seçin*",
+                            fontSize = 14.sp,
+                            color = Color.Black.copy(0.7f),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Start
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { showSubCategoryPicker = true },
+                            color = Color(0xffE1E2EC),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            categoryList.forEach { category ->
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = selectedSubCategoryName?.subCategoryName ?: "Seçiniz",
+                                    color = Color.Black
+                                )
+
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.graphicsLayer { rotationZ = rotation2 },
+                                    tint = Color.Black
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showSubCategoryPicker,
+                            onDismissRequest = { showSubCategoryPicker = false },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.heightIn(max = 160.dp),
+                            containerColor = Color.White
+                        ) {
+                            subCategories.forEach { subCategory ->
                                 DropdownMenuItem(
-                                    text = { Text(category.categoryName) },
+                                    text = { Text(subCategory.subCategoryName) },
                                     onClick = {
-                                        categoryName = category.categoryName
-                                        checked = false
-                                    },
-                                    modifier = Modifier.heightIn(max = 80.dp)
+                                        selectedSubCategory = subCategory.subCategoryId
+                                        showSubCategoryPicker = false
+                                    }
                                 )
                             }
                         }
                     }
-                )
-
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
+                }
 
                 /*Amount*/
                 Text(
-                    text = "Harcama Tutarı(TL)",
+                    text = "Harcama Tutarı(TL)*",
                     fontSize = 14.sp,
                     color = Color.Black.copy(0.7f),
                     modifier = Modifier.fillMaxWidth(),
@@ -569,7 +882,7 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
 
                 /*Date Picker*/
                 Text(
-                    text = "Harcama Tarihi",
+                    text = "Harcama Tarihi*",
                     fontSize = 14.sp,
                     color = Color.Black.copy(0.7f),
                     modifier = Modifier.fillMaxWidth(),
@@ -580,16 +893,16 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ){ showDatePicker = true },
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { showDatePicker = true },
                     color = Color(0xffE1E2EC),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
                     Text(
                         text = dateFormatter.format(date),
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(16.dp),
                         color = Color.Black
                     )
                 }
@@ -636,7 +949,7 @@ fun DatePickerSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope() //animasyonlu kapatma işlemi için
 
-    var selectedDate by remember { mutableStateOf(selectedDate) }
+    var selectedDate by remember { mutableLongStateOf(selectedDate) }
     val dateState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
 
     ModalBottomSheet(
@@ -669,7 +982,7 @@ fun DatePickerSheet(
                 },
                 showModeToggle = false,
                 colors = DatePickerDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = Color.White,
                     selectedDayContentColor = Color.White,
                     selectedDayContainerColor = Color(0xff101828),
                     todayContentColor = Color(0xff101828),
@@ -679,7 +992,9 @@ fun DatePickerSheet(
             Spacer(Modifier.height(16.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(
@@ -756,12 +1071,14 @@ fun ShowCategoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -867,7 +1184,9 @@ fun ShowCategoryCard(
             MoneyProgressBar(percent = percent, color1 = bgColor1, color2 = bgColor2)
 
             AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     subCategoryList.forEach { subCategoryWithAmount ->
                         val subCategory = subCategoryWithAmount.subCategory
                         val amount = subCategoryWithAmount.totalAmount
@@ -878,7 +1197,7 @@ fun ShowCategoryCard(
                             0
                         }
 
-                        Column {
+                        Column (modifier = Modifier.padding(bottom = 12.dp)){
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -963,8 +1282,8 @@ fun DatePickerCard(
     onDissmiss: () -> Unit,
     onValueChange: (selectedYear: Int, selectedMonth: Int) -> Unit
 ) {
-    var selectedYear by remember { mutableStateOf(year) }
-    var selectedMonth by remember { mutableStateOf(month) }
+    var selectedYear by remember { mutableIntStateOf(year) }
+    var selectedMonth by remember { mutableIntStateOf(month) }
 
 
     val years = listOf(2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035)
@@ -1234,7 +1553,10 @@ fun MoneyProgressBar(
                     .fillMaxHeight()
                     .fillMaxWidth(fraction = (percent / 100f).coerceIn(0f, 1f))
                     .clip(RoundedCornerShape(32.dp))
-                    .background(brush = Brush.horizontalGradient(colors = listOf(color1, color2)), shape = RoundedCornerShape(32.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(colors = listOf(color1, color2)),
+                        shape = RoundedCornerShape(32.dp)
+                    )
                 //coerceIn -> min-max aralığını belirtir
             )
         }

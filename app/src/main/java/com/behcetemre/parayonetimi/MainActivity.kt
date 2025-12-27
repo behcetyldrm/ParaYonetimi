@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -28,7 +29,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             ParaYönetimiTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) {
+                Scaffold(modifier = Modifier.fillMaxSize(), containerColor = Color.White) {
                     NavHost(navController = navController, startDestination = Screen.HomeScreen.route){
                         composable(Screen.HomeScreen.route){
                             HomeScreen(navController)

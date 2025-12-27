@@ -94,6 +94,13 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
             initialValue = emptyList()
         )
 
+    val subCategoryList : StateFlow<List<SubCategoryModel>> = dao.getAllSubCategory()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
 
     //flatMapLatest -> sadece seçili işlemi yapar diğer işlemleri durdurur
     val spendings : StateFlow<Int?> = selectedDate.flatMapLatest { (startDate, endDate) ->

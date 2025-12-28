@@ -120,6 +120,19 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
         }
     }
 
+    fun updateCategory(categoryModel: CategoryModel){
+        viewModelScope.launch (Dispatchers.IO){
+            dao.updateCategory(categoryModel)
+        }
+    }
+
+    fun updateSubCategory(subCategoryModel: SubCategoryModel){
+        viewModelScope.launch (Dispatchers.IO){
+            dao.updateSubCategory(subCategoryModel)
+        }
+    }
+
+
     fun addSubCategory(subCategoryModel: SubCategoryModel) {
         viewModelScope.launch (Dispatchers.IO){
             dao.insertSubCategory(subCategoryModel)

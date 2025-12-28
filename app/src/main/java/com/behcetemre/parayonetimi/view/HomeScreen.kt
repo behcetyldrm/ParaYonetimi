@@ -445,6 +445,9 @@ fun AddCategoryCard(
     }
 }
 
+fun limitControl(subLimit: Int, remainingLimit: Int): Boolean {
+    return subLimit > remainingLimit
+}
 @Composable
 fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
 
@@ -455,6 +458,26 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
     var subCategoryName by remember { mutableStateOf("") }
     var subCategoryLimit by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) }
+
+    val selectedCategory = categoryList.find { it.categoryId == selectedCategoryId }
+    val rotation by animateFloatAsState(targetValue = if (categoryPicker) 180f else 0f)
+    val subCategories = subCategoryList.filter {
+        it.category == selectedCategoryId && it.subCategoryName != "Diğer"
+    }
+    val totalSubCategoryLimit = subCategories.sumOf { it.limit }
+    val remainingLimit = if (selectedCategory != null) {
+        selectedCategory.limit - totalSubCategoryLimit
+    } else {
+        null
+    }
+
+    val limitControl = if (remainingLimit != null && subCategoryLimit.isNotBlank()){
+        limitControl(subLimit = subCategoryLimit.toInt(), remainingLimit = remainingLimit)
+    } else {
+        false
+    }
+
+
 
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.5f)),
@@ -476,12 +499,23 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     IconButton(
                         onClick = {
                             /*Sub category Save*/
-                            if (selectedCategoryId != null && subCategoryName.isNotBlank() && subCategoryLimit.isNotBlank()){
+                            if (selectedCategoryId != null && subCategoryName.isNotBlank() && subCategoryLimit.isNotBlank() && selectedCategory != null){
                                 val subCategory = SubCategoryModel(
                                     subCategoryName = subCategoryName,
                                     category = selectedCategoryId!!,
                                     limit = subCategoryLimit.toInt()
                                 )
+                                if (limitControl) {
+                                    val newLimit = (selectedCategory.limit - remainingLimit!!) + subCategoryLimit.toInt()
+                                    val newCategory = selectedCategory.copy(limit = newLimit)
+                                    viewModel.updateCategory(newCategory)
+                                }
+                                val newSubCategory = subCategoryList.find { it.category == selectedCategoryId && it.subCategoryName == "Diğer" }
+
+                                if (newSubCategory != null) {
+                                    val newSubLimit = if (limitControl) 0 else (remainingLimit!! - subCategoryLimit.toInt())
+                                    viewModel.updateSubCategory(newSubCategory.copy(limit = newSubLimit))
+                                }
                                 viewModel.addSubCategory(subCategory)
                                 onDissmiss()
                             }
@@ -515,8 +549,6 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     }
                 }
                 /*Category picker*/
-                val selectedCategory = categoryList.find { it.categoryId == selectedCategoryId }
-                val rotation by animateFloatAsState(targetValue = if (categoryPicker) 180f else 0f)
                 Text(
                     text = "Kategori Seçin*",
                     fontSize = 14.sp,
@@ -610,16 +642,6 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                 Spacer(Modifier.height(16.dp))
 
                 /*Limit*/
-                val subCategories = subCategoryList.filter {
-                    it.category == selectedCategoryId && it.subCategoryName != "Diğer"
-                }
-                val totalSubCategoryLimit = subCategories.sumOf { it.limit }
-                val remainingLimit = if (selectedCategory != null) {
-                    selectedCategory.limit - totalSubCategoryLimit
-                } else {
-                    null
-                }
-
                 Row (modifier = Modifier.fillMaxWidth()){
                     Text(
                         text = "Limit*",
@@ -1191,10 +1213,10 @@ fun ShowCategoryCard(
                         val subCategory = subCategoryWithAmount.subCategory
                         val amount = subCategoryWithAmount.totalAmount
 
-                        val subPercent = if (categoryModel.limit > 0){
+                        val subPercent = if (subCategory.limit > 0){
                             ((amount.toFloat() * 100) / subCategory.limit.toFloat()).toInt()
                         } else {
-                            0
+                            if (amount > 0) 100 else 0
                         }
 
                         Column (modifier = Modifier.padding(bottom = 12.dp)){

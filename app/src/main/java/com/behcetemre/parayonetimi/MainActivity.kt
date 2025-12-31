@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.behcetemre.parayonetimi.ui.theme.ParaYönetimiTheme
 import com.behcetemre.parayonetimi.util.Screen
+import com.behcetemre.parayonetimi.view.DetailScreen
 import com.behcetemre.parayonetimi.view.HomeScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -33,6 +36,18 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = Screen.HomeScreen.route){
                         composable(Screen.HomeScreen.route){
                             HomeScreen(navController)
+                        }
+
+                        composable(
+                            route = Screen.DetailScreen.route,
+                            arguments = listOf(
+                                navArgument("categoryId"){ type = NavType.IntType }
+                            )
+                        ) {
+                            val categoryId = it.arguments?.getInt("categoryId")
+                            categoryId?.let { id ->
+                                DetailScreen(categoryId = id)
+                            }
                         }
                     }
                 }

@@ -10,7 +10,10 @@ data class CategoryModel(
     val categoryId: Int = 0,
     val categoryName: String,
     val icon: String,
-    val limit: Int
+    val limit: Int,
+    val bgColor1: Int,
+    val bgColor2: Int,
+    val iconColor: Int
 )
 
 @Entity(

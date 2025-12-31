@@ -5,10 +5,15 @@ package com.behcetemre.parayonetimi.view
 import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,7 +65,6 @@ import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -82,9 +87,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -98,6 +106,7 @@ import com.behcetemre.parayonetimi.R
 import com.behcetemre.parayonetimi.model.CategoryModel
 import com.behcetemre.parayonetimi.model.SpendingModel
 import com.behcetemre.parayonetimi.model.SubCategoryModel
+import com.behcetemre.parayonetimi.util.Screen
 import com.behcetemre.parayonetimi.viewmodel.HomeViewModel
 import com.behcetemre.parayonetimi.viewmodel.SubCategoryWithSpend
 import kotlinx.coroutines.launch
@@ -110,6 +119,7 @@ data class CategoryColor(
     val bgColor2: Color,
     val iconColor: Color
 )
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
@@ -125,15 +135,6 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     var subCategoryExpanded by remember { mutableStateOf(false) }
     var spendingExpanded by remember { mutableStateOf(false) }
     var datePickerExpanded by remember { mutableStateOf(false) }
-
-    val colorList = listOf(
-        CategoryColor(Color(0xff60a5fa), Color(0xff2563eb), Color(0xffeff6ff)),
-        CategoryColor(Color(0xffc084fc), Color(0xff9333ea), Color(0xfffaf5ff)),
-        CategoryColor(Color(0xff2dd4bf), Color(0xff0d9488), Color(0xfff0fdfa)),
-        CategoryColor(Color(0xfffb923c), Color(0xffea580c), Color(0xfffff7ed)),
-        CategoryColor(Color(0xff22d3ee), Color(0xff0891b2), Color(0xffecfeff)),
-        CategoryColor(Color(0xfff87171), Color(0xffdc2626), Color(0xfffef2f2))
-    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -168,15 +169,14 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 items(categoryUiList.value){ item ->
-                    val index = categoryList.value.indexOf(item.category) % colorList.size
-                    val color = colorList[index]
+
                     val subCategories = item.subCategory
 
                     ShowCategoryCard(
                         categoryModel = item.category,
-                        bgColor1 = color.bgColor1,
-                        bgColor2 = color.bgColor2,
-                        iconColor = color.iconColor,
+                        bgColor1 = Color(item.category.bgColor1),
+                        bgColor2 = Color(item.category.bgColor2),
+                        iconColor = Color(item.category.iconColor),
                         spends = item.totalAmount,
                         subCategoryList = subCategories,
                         navController = navController
@@ -286,12 +286,6 @@ fun AddCategoryCard(
     onDissmiss: () -> Unit
 ) {
 
-    var categoryName by remember { mutableStateOf("") }
-    var categoryLimit by remember { mutableStateOf("") }
-    var icon by remember { mutableStateOf("shop_icon") }
-
-    val context = LocalContext.current
-
     val iconList = listOf(
         "shop_icon" to R.drawable.shop_icon,
         "money_icon" to R.drawable.money_icon,
@@ -306,6 +300,22 @@ fun AddCategoryCard(
         "book_icon" to R.drawable.book_icon,
         "coffee_icon" to R.drawable.coffee_icon
     )
+    val colorList = listOf(
+        CategoryColor(Color(0xff60a5fa), Color(0xff2563eb), Color(0xffeff6ff)),
+        CategoryColor(Color(0xffc084fc), Color(0xff9333ea), Color(0xfffaf5ff)),
+        CategoryColor(Color(0xff2dd4bf), Color(0xff0d9488), Color(0xfff0fdfa)),
+        CategoryColor(Color(0xfffb923c), Color(0xffea580c), Color(0xfffff7ed)),
+        CategoryColor(Color(0xff22d3ee), Color(0xff0891b2), Color(0xffecfeff)),
+        CategoryColor(Color(0xfff87171), Color(0xffdc2626), Color(0xfffef2f2))
+    )
+
+    var categoryName by remember { mutableStateOf("") }
+    var categoryLimit by remember { mutableStateOf("") }
+    var icon by remember { mutableStateOf("shop_icon") }
+    var selectedColor by remember { mutableStateOf(colorList.first()) }
+
+    val context = LocalContext.current
+
 
    Box(
        modifier = Modifier
@@ -323,104 +333,107 @@ fun AddCategoryCard(
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Text(
-                        "İsim",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black.copy(0.7f)
-                    )
-
-                    Row{
-                        IconButton(
-                            onClick = {
-                                if (categoryName.isNotBlank() && categoryLimit.isNotBlank() && categoryLimit.toInt() > 0) {
-                                    val category = CategoryModel(
-                                        categoryName = categoryName,
-                                        limit = categoryLimit.toInt(),
-                                        icon = icon
+                    IconButton(
+                        onClick = {
+                            if (categoryName.isNotBlank() && categoryLimit.isNotBlank() && categoryLimit.toInt() > 0) {
+                                val category = CategoryModel(
+                                    categoryName = categoryName,
+                                    limit = categoryLimit.toInt(),
+                                    icon = icon,
+                                    bgColor1 = selectedColor.bgColor1.toArgb(),
+                                    bgColor2 = selectedColor.bgColor2.toArgb(),
+                                    iconColor = selectedColor.iconColor.toArgb()
+                                )
+                                viewModel.addCategory(category) { id ->
+                                    val subCategory = SubCategoryModel(
+                                        subCategoryName = "Diğer",
+                                        category = id,
+                                        limit = categoryLimit.toInt()
                                     )
-                                    viewModel.addCategory(category) { id ->
-                                        val subCategory = SubCategoryModel(
-                                            subCategoryName = "Diğer",
-                                            category = id,
-                                            limit = categoryLimit.toInt()
-                                        )
-                                        viewModel.addSubCategory(subCategory)
-                                        onDissmiss()
-                                    }
-
-                                } else {
-                                    Toast.makeText(context, "Lütfen boş alanları doldurunuz", Toast.LENGTH_SHORT).show()
+                                    viewModel.addSubCategory(subCategory)
+                                    onDissmiss()
                                 }
-                            },
-                            shape = CircleShape,
-                            colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
-                            modifier = Modifier.size(25.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                tint = Color.White,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
 
-                        Spacer(Modifier.width(6.dp))
+                            } else {
+                                Toast.makeText(context, "Lütfen boş alanları doldurunuz", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
+                        modifier = Modifier.size(25.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            tint = Color.White,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
 
-                        IconButton(
-                            onClick = { onDissmiss() },
-                            shape = CircleShape,
-                            colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
-                            modifier = Modifier.size(25.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                tint = Color.White,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                    Spacer(Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = { onDissmiss() },
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xff101828)),
+                        modifier = Modifier.size(25.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            tint = Color.White,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    "İsim",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black.copy(0.7f)
+                )
+                Spacer(Modifier.height(4.dp))
                 SpecialTextField(
                     value = categoryName,
                     placeHolder = "Örn: alışveriş, vergi, yemek..."
-                ) { categoryName = it }
+                ) { if (it.length <= 18) categoryName = it }
 
                 Spacer(Modifier.height(12.dp))
 
+                /*Limit Ekle*/
                 Text(
                     "Limit(TL)",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black.copy(0.7f)
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 SpecialTextField(
                     value = categoryLimit,
-                    placeHolder = "1000"
-                ) { categoryLimit = it }
+                    placeHolder = "1000",
+                    keyboardType = KeyboardType.Number
+                ) { if (it.length <= 8) categoryLimit = it }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
+                /*Icon Picker*/
                 Text(
                     "İkon",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black.copy(0.7f)
                 )
-                Spacer(Modifier.height(12.dp))
-
+                Spacer(Modifier.height(4.dp))
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(iconList){ (iconName, iconRes) ->
+                        val bgColor by animateColorAsState(if (icon == iconName) Color(0xFF304777) else Color(0xffE1E2EC))
+                        val iconColor by animateColorAsState(if (icon == iconName) Color.White else Color.Black)
                         Surface(
                             modifier = Modifier.clickable (
                                 interactionSource = remember { MutableInteractionSource() },
@@ -429,14 +442,72 @@ fun AddCategoryCard(
                                 icon = iconName
                             },
                             shape = RoundedCornerShape(8.dp),
-                            color = if (icon == iconName) Color(0xff101828) else Color(0xFFF0F0F0),
-                            contentColor = if (icon == iconName) Color.White else Color.Black
+                            color = bgColor,
+                            contentColor = iconColor
                         ) {
                             Icon(
                                 painter = painterResource(id = iconRes),
                                 contentDescription = null,
                                 modifier = Modifier.padding(12.dp)
                             )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                /*Color Picker*/
+                Text(
+                    "Renk Seçin",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black.copy(0.7f)
+                )
+                Spacer(Modifier.height(4.dp))
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(colorList) { (bgColor1, bgColor2, iconColor) ->
+                        val colorItem = CategoryColor(bgColor1, bgColor2, iconColor)
+                        val isSelected = selectedColor == colorItem
+
+                        Surface(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    selectedColor = colorItem
+                                },
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.Transparent
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(colorItem.bgColor1, colorItem.bgColor2)
+                                        )
+                                    ),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                AnimatedVisibility(
+                                    visible = isSelected,
+                                    enter = fadeIn() + scaleIn(),
+                                    exit = fadeOut() + scaleOut()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -480,11 +551,15 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
 
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.5f)),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(0.5f)),
         contentAlignment = Alignment.Center
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -558,15 +633,19 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Surface(
-                    modifier = Modifier.fillMaxWidth().clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { categoryPicker = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { categoryPicker = true },
                     color = Color(0xffE1E2EC),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -622,7 +701,7 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                         }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 /*Sub Category Name*/
                 Text(
@@ -637,9 +716,9 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     value = subCategoryName,
                     placeHolder = "Örn: Mutfak, Fatura"
                 ) {
-                    if (subCategoryName.length <= 20) subCategoryName = it
+                    if (it.length <= 18) subCategoryName = it
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 /*Limit*/
                 Row (modifier = Modifier.fillMaxWidth()){
@@ -667,7 +746,7 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     placeHolder = "1000",
                     keyboardType = KeyboardType.Number
                 ) {
-                    if (subCategoryLimit.length <= 8) subCategoryLimit = it
+                    if (it.length <= 8) subCategoryLimit = it
                 }
             }
         }
@@ -817,7 +896,7 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 /*Sub Category Picker*/
                 val subCategories = subCategoryList.filter { it.category == selectedCategory }
@@ -882,7 +961,7 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                             }
                         }
                     }
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
                 }
 
                 /*Amount*/
@@ -898,9 +977,9 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                     value = amount,
                     placeHolder = "1000",
                     keyboardType = KeyboardType.Number
-                ) { if(amount.length <= 8) amount = it }
+                ) { if(it.length <= 8) amount = it }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
                 /*Date Picker*/
                 Text(
@@ -928,7 +1007,7 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                         color = Color.Black
                     )
                 }
-
+                Spacer(Modifier.height(12.dp))
                 /*Not*/
                 Text(
                     text = "Not",
@@ -941,12 +1020,8 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                 SpecialTextField(
                     value = note,
                     placeHolder = "Not yazın...",
-                    singleLine = false
-                ) {
-                    if (note.length <= 30){
-                        note = it
-                    }
-                }
+                    singleLine = true
+                ) { if (it.length <= 30) note = it }
             }
         }
 
@@ -1093,7 +1168,10 @@ fun ShowCategoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clickable {
+                navController.navigate(Screen.DetailScreen.routeWithArgs(categoryId = categoryModel.categoryId))
+            },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -1108,10 +1186,17 @@ fun ShowCategoryCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically){
                     Surface(
-                        modifier = Modifier.background(
-                            brush = Brush.horizontalGradient(colors = listOf(bgColor1, bgColor2)),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
+                        modifier = Modifier
+                            .shadow(elevation = 12.dp, shape = RoundedCornerShape(12.dp))
+                            .background(
+                                brush = Brush.horizontalGradient(colors = listOf(bgColor1, bgColor2)),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
                         color = Color.Transparent,
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -1335,14 +1420,16 @@ fun DatePickerCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(years){ year ->
+                        val bgColor by animateColorAsState(if (year == selectedYear) Color(0xFF304777) else Color(0xffE1E2EC))
+                        val iconColor by animateColorAsState(if (year == selectedYear) Color.White else Color.Black)
                         Surface(
                             modifier = Modifier.clickable (
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ){ selectedYear = year },
                             shape = RoundedCornerShape(8.dp),
-                            color = if (selectedYear == year) Color(0xff101828) else Color(0xFFF0F0F0),
-                            contentColor = if (selectedYear == year) Color.White else Color.Black
+                            color = bgColor,
+                            contentColor = iconColor
                         ) {
                             Text(
                                 text = year.toString(),
@@ -1364,14 +1451,16 @@ fun DatePickerCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(months){ month ->
+                        val bgColor by animateColorAsState(if (selectedMonth == months.indexOf(month)) Color(0xFF304777) else Color(0xffE1E2EC))
+                        val iconColor by animateColorAsState(if (selectedMonth == months.indexOf(month)) Color.White else Color.Black)
                         Surface(
                             modifier = Modifier.clickable (
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ){ selectedMonth = months.indexOf(month) },
                             shape = RoundedCornerShape(8.dp),
-                            color = if (selectedMonth == months.indexOf(month)) Color(0xff101828) else Color(0xFFF0F0F0),
-                            contentColor = if (selectedMonth == months.indexOf(month)) Color.White else Color.Black
+                            color = bgColor,
+                            contentColor = iconColor
                         ) {
                             Text(
                                 text = month,
@@ -1411,6 +1500,9 @@ fun TotalCard(
     month: Int,
     limit: Int,
     amount: Int,
+    color1: Color = Color(0xff1e293b),
+    color2: Color = Color(0xff0f172a),
+    icon: String? = null,
     onDissmiss: () -> Unit
 ) {
     val months = listOf(
@@ -1418,12 +1510,6 @@ fun TotalCard(
         "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
     )
     val percent = if (limit == 0) 0 else ((amount.toFloat() / limit.toFloat()) * 100f).toInt()
-
-    /*var checked by remember { mutableStateOf(false) }
-    val rotation by animateFloatAsState(
-        targetValue = if (checked) 180f else 0f,
-        label = "rotationAnimation"
-    )*/
 
     Card(
         modifier = Modifier
@@ -1436,7 +1522,7 @@ fun TotalCard(
         Box(
             modifier = Modifier
                 .background(brush = Brush.horizontalGradient(
-                colors = listOf(Color(0xff1e293b), Color(0xff0f172a),Color(0xff111827))),
+                colors = listOf(color1, color2)),
                 shape = RoundedCornerShape(16.dp)
             )
         ) {
@@ -1448,12 +1534,18 @@ fun TotalCard(
                 ) {
                     Column {
                         Surface(
-                            modifier = Modifier.clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onDissmiss() },
+                            modifier = Modifier
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onDissmiss() },
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF334155)
+                            color = Color.White.copy(0.1f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp),
@@ -1469,12 +1561,51 @@ fun TotalCard(
                             }
                         }
                     }
-
-                    Text(
-                        text = "Toplam",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                    )
+                    if (icon != null){
+                        val iconRes = when(icon){
+                            "shop_icon" -> R.drawable.shop_icon
+                            "money_icon" -> R.drawable.money_icon
+                            "home_icon" -> R.drawable.home_icon
+                            "food_icon" -> R.drawable.food_icon
+                            "belge_icon" -> R.drawable.belge_icon
+                            "book_icon" -> R.drawable.book_icon
+                            "coffee_icon" -> R.drawable.coffee_icon
+                            "car_icon" -> R.drawable.car_icon
+                            "exercise_icon" -> R.drawable.exercise_icon
+                            "game_icon" -> R.drawable.game_icon
+                            "pet_icon" -> R.drawable.pet_icon
+                            "tech_icon" -> R.drawable.tech_icon
+                            else -> R.drawable.shop_icon
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(12.dp))
+                                .background(
+                                    brush = Brush.horizontalGradient(colors = listOf(color1, color2)),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(14.dp)
+                                ),
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = iconRes),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }else {
+                        Text(
+                            text = "Toplam",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(18.dp))
@@ -1484,9 +1615,15 @@ fun TotalCard(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Surface(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xff334155)
+                        color = Color.White.copy(0.1f)
                     ) {
                         Column(
                             modifier = Modifier.padding(12.dp),
@@ -1509,9 +1646,15 @@ fun TotalCard(
                     }
                     Spacer(Modifier.width(12.dp))
                     Surface(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xff334155)
+                        color = Color.White.copy(0.1f)
                     ) {
                         Column(
                             modifier = Modifier.padding(12.dp),

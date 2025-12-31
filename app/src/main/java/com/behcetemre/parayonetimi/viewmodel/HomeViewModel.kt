@@ -1,6 +1,7 @@
 package com.behcetemre.parayonetimi.viewmodel
 
 import android.icu.util.Calendar
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.behcetemre.parayonetimi.database.AppDao

@@ -77,7 +77,7 @@ class HomeViewModel @Inject constructor(private val dao: AppDao) : ViewModel() {
             val subCategory = subCategories.filter { it.category == category.categoryId }
             val subCategoryWithAmount = subCategory.map { subCategory ->
                 val spending = spendings.filter { it.subCategory == subCategory.subCategoryId }.sumOf { it.amount }
-                SubCategoryWithSpend(subCategory, spending)
+                SubCategoryWithSpend(subCategory = subCategory, totalAmount = spending)
             }
 
             CategoryWithSpend(category, subCategoryWithAmount, totalAmount)

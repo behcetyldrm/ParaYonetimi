@@ -18,7 +18,7 @@ interface AppDao {
     fun getAllCategory() : Flow<List<CategoryModel>>
 
     @Query("SELECT * FROM category_model WHERE categoryId = :id")
-    fun getCategoryById(id: Int) : Flow<CategoryModel>
+    fun getCategoryById(id: Int) : Flow<CategoryModel?>
 
     //belirtilen aralıkta ki harcamaları getir
     @Query("SELECT SUM(amount) FROM spending_model WHERE createdDate BETWEEN :startDate AND :endDate")

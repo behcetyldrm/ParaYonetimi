@@ -122,6 +122,37 @@ class DetailViewModel @Inject constructor(private val dao: AppDao): ViewModel(){
         }
     }
 
+    fun updateCategory(categoryModel: CategoryModel){
+        viewModelScope.launch (Dispatchers.IO){
+            dao.updateCategory(categoryModel)
+        }
+    }
+
+    fun updateSubCategory(subCategoryModel: SubCategoryModel){
+        viewModelScope.launch (Dispatchers.IO){
+            dao.updateSubCategory(subCategoryModel)
+        }
+    }
+
+    fun deleteSpending(spending: SpendingModel) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteSpending(spending)
+        }
+    }
+
+
+    fun deleteSubCategory(subCategory: SubCategoryModel) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteSubCategory(subCategory)
+        }
+    }
+
+    fun deleteCategory(category: CategoryModel) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteCategory(category)
+        }
+    }
+
     fun updateDate(year: Int, month: Int){
         _selectedYear.value = year
         _selectedMonth.value = month

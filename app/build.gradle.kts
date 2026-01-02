@@ -60,6 +60,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+
     val room_version = "2.8.1"
 
     //room
@@ -87,5 +88,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.7.8")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("androidx.work:work-runtime-ktx:2.11.0")
+    implementation("androidx.core:core-splashscreen:1.2.0")
 
 }

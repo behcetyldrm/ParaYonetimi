@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,6 +28,8 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen() //uygulama açılırken logo gözükür
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -46,7 +49,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             val categoryId = it.arguments?.getInt("categoryId")
                             categoryId?.let { id ->
-                                DetailScreen(categoryId = id)
+                                DetailScreen(categoryId = id, navController = navController)
                             }
                         }
                     }

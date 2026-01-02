@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,10 +90,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -107,12 +105,15 @@ import com.behcetemre.parayonetimi.model.CategoryModel
 import com.behcetemre.parayonetimi.model.SpendingModel
 import com.behcetemre.parayonetimi.model.SubCategoryModel
 import com.behcetemre.parayonetimi.util.Screen
+import com.behcetemre.parayonetimi.viewmodel.DetailViewModel
 import com.behcetemre.parayonetimi.viewmodel.HomeViewModel
 import com.behcetemre.parayonetimi.viewmodel.SubCategoryWithSpend
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.text.trim
 
 data class CategoryColor(
     val bgColor1: Color,
@@ -191,7 +192,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        AddCategoryCard(viewModel = viewModel) { categoryExpanded = false }
+        AddCategoryCard(homeViewModel = viewModel) { categoryExpanded = false }
     }
 
     AnimatedVisibility(
@@ -283,7 +284,9 @@ fun FloatingButton(
 
 @Composable
 fun AddCategoryCard(
-    viewModel: HomeViewModel,
+    homeViewModel: HomeViewModel? = null,
+    detailViewModel: DetailViewModel? = null,
+    category: CategoryModel? = null,
     onDissmiss: () -> Unit
 ) {
 
@@ -310,10 +313,22 @@ fun AddCategoryCard(
         CategoryColor(Color(0xfff87171), Color(0xffdc2626), Color(0xfffef2f2))
     )
 
-    var categoryName by remember { mutableStateOf("") }
-    var categoryLimit by remember { mutableStateOf("") }
-    var icon by remember { mutableStateOf("shop_icon") }
-    var selectedColor by remember { mutableStateOf(colorList.first()) }
+    var categoryName by remember { mutableStateOf(category?.categoryName ?: "") }
+    var categoryLimit by remember { mutableStateOf(category?.limit?.toString() ?:"") }
+    var icon by remember { mutableStateOf(category?.icon ?: "shop_icon") }
+    var selectedColor by remember { mutableStateOf(
+        if (category != null) {
+            CategoryColor(Color(category.bgColor1), Color(category.bgColor2), Color(category.iconColor))
+        }else {
+            colorList.first()
+        }
+    )}
+    val subCategoryList = detailViewModel?.subCategoryList?.collectAsState()?.value
+    val subCategoryLimit = subCategoryList?.filter {
+        it?.subCategory?.category == category?.categoryId && it?.subCategory?.subCategoryName != "Diğer"
+    }?.sumOf {
+        it?.subCategory?.limit ?: 0
+    }
 
     val context = LocalContext.current
 
@@ -338,25 +353,47 @@ fun AddCategoryCard(
                 ) {
                     IconButton(
                         onClick = {
-                            if (categoryName.isNotBlank() && categoryLimit.isNotBlank() && categoryLimit.toInt() > 0) {
-                                val category = CategoryModel(
-                                    categoryName = categoryName,
-                                    limit = categoryLimit.toInt(),
-                                    icon = icon,
-                                    bgColor1 = selectedColor.bgColor1.toArgb(),
-                                    bgColor2 = selectedColor.bgColor2.toArgb(),
-                                    iconColor = selectedColor.iconColor.toArgb()
-                                )
-                                viewModel.addCategory(category) { id ->
-                                    val subCategory = SubCategoryModel(
-                                        subCategoryName = "Diğer",
-                                        category = id,
-                                        limit = categoryLimit.toInt()
-                                    )
-                                    viewModel.addSubCategory(subCategory)
-                                    onDissmiss()
-                                }
+                           if (categoryName.isNotBlank() && categoryLimit.isNotBlank() && categoryLimit.toInt() > 0) {
+                               if (category != null && detailViewModel != null && subCategoryLimit != null){
+                                   val remainingLimit = categoryLimit.trim().toInt() - subCategoryLimit
+                                   val digerCategory = subCategoryList.find { it?.subCategory?.category == category.categoryId && it.subCategory.subCategoryName == "Diğer" }
 
+                                   val newCategory = category.copy(
+                                       categoryName = categoryName.trim(),
+                                       limit = categoryLimit.trim().toInt(),
+                                       icon = icon,
+                                       bgColor1 = selectedColor.bgColor1.toArgb(),
+                                       bgColor2 = selectedColor.bgColor2.toArgb(),
+                                       iconColor = selectedColor.iconColor.toArgb()
+                                   )
+                                   val newSubCategory = digerCategory?.subCategory?.copy(
+                                       limit = remainingLimit
+                                   )
+                                   if (newSubCategory != null){
+                                       detailViewModel.updateSubCategory(newSubCategory)
+                                       detailViewModel.updateCategory(newCategory)
+                                       onDissmiss()
+                                   }
+
+                               }else {
+                                   val category = CategoryModel(
+                                       categoryName = categoryName.trim(),
+                                       limit = categoryLimit.trim().toInt(),
+                                       icon = icon,
+                                       bgColor1 = selectedColor.bgColor1.toArgb(),
+                                       bgColor2 = selectedColor.bgColor2.toArgb(),
+                                       iconColor = selectedColor.iconColor.toArgb()
+                                   )
+                                   homeViewModel?.addCategory(category) { id ->
+                                       val subCategory = SubCategoryModel(
+                                           subCategoryName = "Diğer",
+                                           category = id,
+                                           limit = categoryLimit.trim().toInt()
+                                       )
+                                       homeViewModel.addSubCategory(subCategory)
+                                       onDissmiss()
+                                   }
+                               }
                             } else {
                                 Toast.makeText(context, "Lütfen boş alanları doldurunuz", Toast.LENGTH_SHORT).show()
                             }
@@ -404,6 +441,7 @@ fun AddCategoryCard(
                 Spacer(Modifier.height(12.dp))
 
                 /*Limit Ekle*/
+
                 Text(
                     "Limit(TL)",
                     fontSize = 14.sp,
@@ -577,19 +615,19 @@ fun AddSubCategory(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                             /*Sub category Save*/
                             if (selectedCategoryId != null && subCategoryName.isNotBlank() && subCategoryLimit.isNotBlank() && selectedCategory != null){
                                 val subCategory = SubCategoryModel(
-                                    subCategoryName = subCategoryName,
+                                    subCategoryName = subCategoryName.trim(),
                                     category = selectedCategoryId!!,
-                                    limit = subCategoryLimit.toInt()
+                                    limit = subCategoryLimit.trim().toInt()
                                 )
                                 if (limitControl) {
-                                    val newLimit = (selectedCategory.limit - remainingLimit!!) + subCategoryLimit.toInt()
+                                    val newLimit = (selectedCategory.limit - remainingLimit!!) + subCategoryLimit.trim().toInt()
                                     val newCategory = selectedCategory.copy(limit = newLimit)
                                     viewModel.updateCategory(newCategory)
                                 }
                                 val newSubCategory = subCategoryList.find { it.category == selectedCategoryId && it.subCategoryName == "Diğer" }
 
                                 if (newSubCategory != null) {
-                                    val newSubLimit = if (limitControl) 0 else (remainingLimit!! - subCategoryLimit.toInt())
+                                    val newSubLimit = if (limitControl) 0 else (remainingLimit!! - subCategoryLimit.trim().toInt())
                                     viewModel.updateSubCategory(newSubCategory.copy(limit = newSubLimit))
                                 }
                                 viewModel.addSubCategory(subCategory)
@@ -799,10 +837,10 @@ fun AddSpendingCard(viewModel: HomeViewModel, onDissmiss: () -> Unit) {
                         onClick = {
                             if (selectedCategory != null && amount.isNotBlank() && amount.toInt() > 0 && selectedSubCategory != null){
                                 val spending = SpendingModel(
-                                    amount = amount.toInt(),
+                                    amount = amount.trim().toInt(),
                                     createdDate = date,
                                     category = categoryList.find { it.categoryId == selectedCategory }!!.categoryId,
-                                    note = note,
+                                    note = note.trim(),
                                     subCategory = selectedSubCategory
                                 )
                                 viewModel.addSpending(spending)
@@ -1370,9 +1408,11 @@ fun SpecialTextField(
         placeholder = { Text(placeHolder) },
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            capitalization = KeyboardCapitalization.Words //ilk harfler büyük
+        ),
         singleLine = singleLine,
-        maxLines = if (singleLine) 1 else 3,
         shape = RoundedCornerShape(12.dp),
         colors = TextFieldDefaults.colors(
             unfocusedContainerColor = Color(0xffE1E2EC),

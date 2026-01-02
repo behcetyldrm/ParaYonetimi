@@ -2,4 +2,9 @@
 <resources>
 
     <style name="Theme.ParaYönetimi" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/para_logo_round</item>
+        <item name="postSplashScreenTheme">@style/Theme.ParaYönetimi</item>
+    </style>
 </resources>
